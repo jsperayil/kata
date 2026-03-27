@@ -81,6 +81,90 @@ curl http://localhost:8080/intersection/history
 curl "http://localhost:8080/intersection/history?direction=NORTH_SOUTH"
 ```
 
-## What's Next
+## What's Next — Step 8: Multiple Intersections
 
-In **Step 8**, we'll scale to multiple intersections — each managed independently with its own cycle and history.
+The final step scales the system to manage multiple intersections, each independently controlled.
+
+### Concepts to Explore
+
+- **Registry pattern** — an `IntersectionRegistry` that stores intersections by ID, with CRUD operations to create and remove them
+- **Nested REST resources** — URLs like `/intersections/{id}/history`, `/intersections/{id}/pause` to scope actions to a specific intersection
+- **Lifecycle management** — each intersection gets its own `TrafficCycleService` instance, started on creation and stopped on removal
+- **Resource not found** — returning 404 when an intersection ID doesn't exist
+- **Dynamic bean management** — creating and destroying service instances at runtime rather than at startup
+
+### Suggested Endpoints
+
+| Method | Path                                  | Description                        |
+|--------|---------------------------------------|------------------------------------|
+| POST   | `/intersections`                      | Create a new intersection          |
+| GET    | `/intersections`                      | List all intersection IDs          |
+| GET    | `/intersections/{id}`                 | Get state of one intersection      |
+| DELETE | `/intersections/{id}`                 | Remove an intersection             |
+| PUT    | `/intersections/{id}/{direction}`     | Transition a direction's light     |
+| GET    | `/intersections/{id}/history`         | Get history for one intersection   |
+| POST   | `/intersections/{id}/pause`           | Pause one intersection's cycle     |
+| POST   | `/intersections/{id}/resume`          | Resume one intersection's cycle    |
+
+---
+
+## Bonus Challenge: Four Directions Instead of Two
+
+The current system groups opposing lanes into two directions (`NORTH_SOUTH`, `EAST_WEST`). A more realistic model uses four individual directions, each with its own light.
+
+### What Changes
+
+**1. Expand the `Direction` enum:**
+
+```java
+public enum Direction {
+    NORTH, SOUTH, EAST, WEST
+}
+```
+
+**2. Define conflict groups:**
+
+Opposing directions can be green together (NORTH + SOUTH share a green phase), but perpendicular directions cannot. Introduce a conflict mapping:
+
+```java
+private static final Map<Direction, Set<Direction>> CONFLICTS = Map.of(
+    Direction.NORTH, Set.of(Direction.EAST, Direction.WEST),
+    Direction.SOUTH, Set.of(Direction.EAST, Direction.WEST),
+    Direction.EAST,  Set.of(Direction.NORTH, Direction.SOUTH),
+    Direction.WEST,  Set.of(Direction.NORTH, Direction.SOUTH)
+);
+```
+
+**3. Update `checkForConflicts()`:**
+
+Instead of checking all *other* directions, only check the ones in the conflict set:
+
+```java
+private void checkForConflicts(Direction requested) {
+    for (Direction conflicting : CONFLICTS.get(requested)) {
+        LightState state = getLight(conflicting).getState();
+        if (state == LightState.GREEN || state == LightState.YELLOW) {
+            throw new ConflictException(requested, conflicting);
+        }
+    }
+}
+```
+
+**4. Update `TrafficCycleService`:**
+
+Instead of cycling one direction at a time, cycle **paired directions** together. One approach: define phase groups:
+
+```java
+private static final List<Set<Direction>> PHASES = List.of(
+    Set.of(Direction.NORTH, Direction.SOUTH),
+    Set.of(Direction.EAST, Direction.WEST)
+);
+```
+
+Each phase transitions its group through GREEN → YELLOW → RED together before moving to the next phase.
+
+### Concepts This Teaches
+
+- **Conflict graphs** — relationships between entities that constrain behavior
+- **Grouping and phases** — coordinating multiple objects through shared state transitions
+- **Refactoring enums** — how a simple enum change ripples through the domain
