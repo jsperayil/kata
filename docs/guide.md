@@ -75,3 +75,29 @@ curl -X PUT http://localhost:8080/light -H "Content-Type: application/json" -d '
 mvn test              # 10 tests covering all valid and invalid transitions
 mvn spring-boot:run   # try valid and invalid transitions via curl
 ```
+
+---
+
+## Step 3: Intersection — Multiple Directions
+
+**Goal:** Model a full intersection with NORTH_SOUTH and EAST_WEST directions, each with their own traffic light.
+
+**What you'll learn:**
+- Domain modeling with composition (`Intersection` owns `TrafficLight`s)
+- `EnumMap` for enum-keyed collections
+- Path variables (`@PathVariable`) in REST endpoints
+
+**New/changed files:**
+- `src/main/java/com/kata/trafficlight/Direction.java` — direction enum
+- `src/main/java/com/kata/trafficlight/Intersection.java` — intersection model
+- `src/main/java/com/kata/trafficlight/IntersectionController.java` — replaces `TrafficLightController`
+
+**Endpoints:**
+- `GET /intersection` — returns state of all directions
+- `PUT /intersection/{direction}` — transitions one direction's light
+
+**Run it:**
+```bash
+mvn test              # 6 tests for multi-direction behavior
+mvn spring-boot:run   # try changing directions independently via curl
+```

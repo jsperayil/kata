@@ -1,29 +1,34 @@
 package com.kata.trafficlight;
 
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/light")
-public class TrafficLightController {
+@RequestMapping("/intersection")
+public class IntersectionController {
 
-    private final TrafficLight trafficLight = new TrafficLight();
+    private final Intersection intersection = new Intersection();
 
     @GetMapping
-    public TrafficLight getLight() {
-        return trafficLight;
+    public Map<Direction, TrafficLight> getIntersection() {
+        return intersection.getLights();
     }
 
-    @PutMapping
-    public ResponseEntity<TrafficLight> changeState(@RequestBody StateChangeRequest request) {
+    @PutMapping("/{direction}")
+    public ResponseEntity<TrafficLight> changeState(
+            @PathVariable Direction direction,
+            @RequestBody StateChangeRequest request) {
         LightState newState = LightState.valueOf(request.state().toUpperCase());
-        trafficLight.transitionTo(newState);
-        return ResponseEntity.ok(trafficLight);
+        intersection.transition(direction, newState);
+        return ResponseEntity.ok(intersection.getLight(direction));
     }
 
     @ExceptionHandler(InvalidTransitionException.class)
