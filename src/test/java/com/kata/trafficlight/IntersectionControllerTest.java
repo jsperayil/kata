@@ -173,6 +173,63 @@ class IntersectionControllerTest {
         }
     }
 
+    @Nested
+    class History {
+
+        @Test
+        void shouldStartWithEmptyHistory() {
+            var history = controller.getHistory(null);
+
+            assertTrue(history.isEmpty());
+        }
+
+        @Test
+        void shouldRecordTransition() {
+            controller.changeState(Direction.NORTH_SOUTH, request("GREEN"));
+
+            var history = controller.getHistory(null);
+
+            assertEquals(1, history.size());
+            assertEquals(Direction.NORTH_SOUTH, history.get(0).direction());
+            assertEquals(LightState.RED, history.get(0).fromState());
+            assertEquals(LightState.GREEN, history.get(0).toState());
+        }
+
+        @Test
+        void shouldRecordMultipleTransitions() {
+            controller.changeState(Direction.NORTH_SOUTH, request("GREEN"));
+            controller.changeState(Direction.NORTH_SOUTH, request("YELLOW"));
+
+            var history = controller.getHistory(null);
+
+            assertEquals(2, history.size());
+        }
+
+        @Test
+        void shouldFilterByDirection() {
+            controller.changeState(Direction.NORTH_SOUTH, request("GREEN"));
+            controller.changeState(Direction.NORTH_SOUTH, request("YELLOW"));
+            controller.changeState(Direction.NORTH_SOUTH, request("RED"));
+            controller.changeState(Direction.EAST_WEST, request("GREEN"));
+
+            var nsHistory = controller.getHistory(Direction.NORTH_SOUTH);
+            var ewHistory = controller.getHistory(Direction.EAST_WEST);
+
+            assertEquals(3, nsHistory.size());
+            assertEquals(1, ewHistory.size());
+        }
+
+        @Test
+        void shouldNotRecordFailedTransitions() {
+            assertThrows(InvalidTransitionException.class,
+                    () -> controller.changeState(Direction.NORTH_SOUTH, request("YELLOW")));
+
+            var history = controller.getHistory(null);
+
+            assertTrue(history.isEmpty());
+        }
+    }
+
     private IntersectionController.StateChangeRequest request(String state) {
         return new IntersectionController.StateChangeRequest(state);
     }

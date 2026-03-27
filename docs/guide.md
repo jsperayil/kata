@@ -174,3 +174,25 @@ mvn spring-boot:run   # watch lights cycle automatically via curl
 mvn test              # 21 tests including pause/resume behavior
 mvn spring-boot:run   # try pausing, manual control, then resuming
 ```
+
+---
+
+## Step 7: History — Tracking State Changes
+
+**Goal:** Record every state change with timestamp. Query all events or filter by direction.
+
+**What you'll learn:**
+- Java records for immutable event data
+- Audit logging — record on success, skip on failure
+- Query parameters with `@RequestParam`
+
+**New/changed files:**
+- `src/main/java/com/kata/trafficlight/StateChangeEvent.java` — immutable event record
+- `src/main/java/com/kata/trafficlight/Intersection.java` — records events on successful transitions
+- `src/main/java/com/kata/trafficlight/IntersectionController.java` — `GET /intersection/history`
+
+**Run it:**
+```bash
+mvn test              # 26 tests including history tracking
+mvn spring-boot:run   # query history after automatic transitions
+```

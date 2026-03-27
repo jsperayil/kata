@@ -1,5 +1,6 @@
 package com.kata.trafficlight;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +39,15 @@ public class IntersectionController {
         LightState newState = LightState.valueOf(request.state().toUpperCase());
         intersection.transition(direction, newState);
         return ResponseEntity.ok(intersection.getLight(direction));
+    }
+
+    @GetMapping("/history")
+    public List<StateChangeEvent> getHistory(
+            @RequestParam(required = false) Direction direction) {
+        if (direction != null) {
+            return intersection.getHistory(direction);
+        }
+        return intersection.getHistory();
     }
 
     @PostMapping("/pause")

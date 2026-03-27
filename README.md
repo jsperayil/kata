@@ -1,77 +1,86 @@
-# Step 6: Pause and Resume
+# Step 7: History — Tracking State Changes
 
 ## What You'll Learn
 
-- Using POST for actions that aren't CRUD operations
-- Separating scheduling from logic for testability
-- Constructor injection with multiple dependencies
-- Testing stateful service behavior
+- Java records for immutable data
+- Audit logging — recording what happened and when
+- Query parameters (`@RequestParam`) for filtering
+- `Collections.unmodifiableList()` for defensive copying
+- Recording only on success (not on failed transitions)
 
 ## The Problem
 
-The automatic cycle from Step 5 runs forever. Sometimes you need to stop it — for maintenance, emergencies, or manual control. You need:
+When something goes wrong at an intersection, you need to know what happened. Every state change should be recorded with:
 
-| Method | Path                     | Description                              |
-|--------|--------------------------|------------------------------------------|
-| POST   | `/intersection/pause`    | Stops the automatic cycle                |
-| POST   | `/intersection/resume`   | Restarts the automatic cycle             |
-| GET    | `/intersection/status`   | Returns whether the cycle is running     |
+- Which direction changed
+- What it changed from and to
+- When it happened
 
-Manual PUT transitions should still work while paused — an operator might need to manually control the lights.
+You also need to query this history — all events, or filtered by direction.
+
+| Method | Path                                         | Description                        |
+|--------|----------------------------------------------|------------------------------------|
+| GET    | `/intersection/history`                      | Returns all state change events    |
+| GET    | `/intersection/history?direction=NORTH_SOUTH`| Returns events for one direction   |
 
 ## Key Concepts
 
-### POST for Actions
+### Java Records
 
-GET reads state. PUT updates a resource. But "pause" and "resume" are **actions**, not resources. POST is the right choice — it triggers a side effect without representing a specific resource.
-
-### Separating Scheduling from Logic
-
-`advanceCycle()` contains the transition logic. `scheduleNextPhase()` handles timing. Pause only stops scheduling — it doesn't affect the logic itself. This separation means:
-
-- **In production:** the scheduler calls `advanceCycle()` automatically
-- **When paused:** the scheduler stops, but manual transitions still work
-- **In tests:** we call `advanceCycle()` directly without waiting for real timers
-
-This is a useful pattern: separate *what* happens from *when* it happens.
-
-### Constructor Injection with Multiple Dependencies
-
-`IntersectionController` now receives both `Intersection` and `TrafficCycleService`:
+`StateChangeEvent` is a record — an immutable data class with automatic `equals()`, `hashCode()`, and `toString()`:
 
 ```java
-public IntersectionController(Intersection intersection, TrafficCycleService cycleService) {
-    this.intersection = intersection;
-    this.cycleService = cycleService;
-}
+public record StateChangeEvent(
+        Direction direction,
+        LightState fromState,
+        LightState toState,
+        Instant timestamp
+) {}
 ```
 
-Spring resolves both beans automatically. No `@Autowired` needed — when there's only one constructor, Spring uses it by default.
+Records are ideal for events — once something happened, its details don't change.
+
+### Audit Logging Pattern
+
+History is recorded **inside the `transition()` method**, after the transition succeeds but as part of the same operation:
+
+```java
+LightState previousState = getLight(direction).getState();
+getLight(direction).transitionTo(newState);        // may throw
+history.add(new StateChangeEvent(...));             // only runs on success
+```
+
+If the transition throws (invalid or conflict), no event is recorded. This guarantees the history only contains real transitions.
+
+### Query Parameters
+
+`@RequestParam(required = false) Direction direction` makes the parameter optional:
+
+```
+GET /intersection/history              → all events
+GET /intersection/history?direction=EAST_WEST  → filtered
+```
+
+Spring converts the string to a `Direction` enum automatically, just like path variables.
 
 ## Your Task
 
-1. Look at `TrafficCycleService.java` — see `pause()` and `resume()` methods
-2. Look at `IntersectionController.java` — the new POST endpoints and `StatusResponse`
-3. Run the tests: `mvn test` (21 tests)
-4. Try it:
+1. Look at `StateChangeEvent.java` — a record with a convenience constructor that stamps the current time
+2. Look at `Intersection.java` — see where history is recorded and the two `getHistory()` methods
+3. Look at `IntersectionController.java` — the `@RequestParam` endpoint
+4. Run the tests: `mvn test` (26 tests)
+5. Try it:
 
 ```bash
 mvn spring-boot:run
 
-# Check status
-curl http://localhost:8080/intersection/status
+# Wait a few seconds for some automatic transitions, then:
+curl http://localhost:8080/intersection/history
 
-# Pause the cycle
-curl -X POST http://localhost:8080/intersection/pause
-
-# Manual transition while paused
-curl -X PUT http://localhost:8080/intersection/NORTH_SOUTH \
-  -H "Content-Type: application/json" -d '{"state": "GREEN"}'
-
-# Resume
-curl -X POST http://localhost:8080/intersection/resume
+# Filter by direction
+curl "http://localhost:8080/intersection/history?direction=NORTH_SOUTH"
 ```
 
 ## What's Next
 
-In **Step 7**, we'll add history tracking — every state change gets recorded with a timestamp so you can query what happened and when.
+In **Step 8**, we'll scale to multiple intersections — each managed independently with its own cycle and history.
