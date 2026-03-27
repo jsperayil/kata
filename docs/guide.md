@@ -32,7 +32,7 @@ You'll build a traffic light controller API one step at a time. Each step introd
 **What you'll learn:**
 - How Spring Boot handles HTTP requests via `@RestController`
 - Using enums (`LightState`) to model a constrained set of values
-- Writing integration tests with `MockMvc`
+- Writing unit tests
 
 **Files to explore:**
 - `src/main/java/com/kata/trafficlight/LightState.java` — the state enum
@@ -52,4 +52,26 @@ curl http://localhost:8080/light
 curl -X PUT http://localhost:8080/light -H "Content-Type: application/json" -d '{"state": "GREEN"}'
 ```
 
-See [the Step 1 README](../README.md) for the full walkthrough.
+---
+
+## Step 2: State Machine — Valid Transitions Only
+
+**Goal:** Enforce that lights can only transition in the correct sequence: RED → GREEN → YELLOW → RED.
+
+**What you'll learn:**
+- Modeling allowed transitions in an enum with `canTransitionTo()`
+- Switch expressions (Java 17+)
+- Custom exceptions and `@ExceptionHandler` for 400 responses
+- Testing both valid and invalid paths
+
+**New/changed files:**
+- `src/main/java/com/kata/trafficlight/LightState.java` — added `getNext()` and `canTransitionTo()`
+- `src/main/java/com/kata/trafficlight/TrafficLight.java` — `transitionTo()` replaces `setState()`
+- `src/main/java/com/kata/trafficlight/InvalidTransitionException.java` — domain exception
+- `src/main/java/com/kata/trafficlight/TrafficLightController.java` — `@ExceptionHandler`
+
+**Run it:**
+```bash
+mvn test              # 10 tests covering all valid and invalid transitions
+mvn spring-boot:run   # try valid and invalid transitions via curl
+```

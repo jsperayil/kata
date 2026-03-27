@@ -1,53 +1,109 @@
 package com.kata.trafficlight;
 
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class TrafficLightControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    private TrafficLightController controller;
 
-    @Test
-    @Order(1)
-    void shouldReturnRedAsDefaultState() throws Exception {
-        mockMvc.perform(get("/light"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.state").value("RED"));
+    @BeforeEach
+    void setUp() {
+        controller = new TrafficLightController();
     }
 
     @Test
-    @Order(2)
-    void shouldChangeStateToGreen() throws Exception {
-        mockMvc.perform(put("/light")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"state\": \"GREEN\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.state").value("GREEN"));
+    void shouldReturnRedAsDefaultState() {
+        TrafficLight light = controller.getLight();
+
+        assertEquals(LightState.RED, light.getState());
+    }
+
+    @Nested
+    class ValidTransitions {
+
+        @Test
+        void shouldTransitionFromRedToGreen() {
+            var response = controller.changeState(request("GREEN"));
+
+            assertEquals(LightState.GREEN, response.getBody().getState());
+        }
+
+        @Test
+        void shouldTransitionFromGreenToYellow() {
+            controller.changeState(request("GREEN"));
+
+            var response = controller.changeState(request("YELLOW"));
+
+            assertEquals(LightState.YELLOW, response.getBody().getState());
+        }
+
+        @Test
+        void shouldTransitionFromYellowToRed() {
+            controller.changeState(request("GREEN"));
+            controller.changeState(request("YELLOW"));
+
+            var response = controller.changeState(request("RED"));
+
+            assertEquals(LightState.RED, response.getBody().getState());
+        }
+
+        @Test
+        void shouldCompleteFullCycle() {
+            controller.changeState(request("GREEN"));
+            controller.changeState(request("YELLOW"));
+            controller.changeState(request("RED"));
+            var response = controller.changeState(request("GREEN"));
+
+            assertEquals(LightState.GREEN, response.getBody().getState());
+        }
+    }
+
+    @Nested
+    class InvalidTransitions {
+
+        @Test
+        void shouldRejectRedToYellow() {
+            assertThrows(InvalidTransitionException.class,
+                    () -> controller.changeState(request("YELLOW")));
+        }
+
+        @Test
+        void shouldRejectRedToRed() {
+            assertThrows(InvalidTransitionException.class,
+                    () -> controller.changeState(request("RED")));
+        }
+
+        @Test
+        void shouldRejectGreenToRed() {
+            controller.changeState(request("GREEN"));
+
+            assertThrows(InvalidTransitionException.class,
+                    () -> controller.changeState(request("RED")));
+        }
+
+        @Test
+        void shouldRejectYellowToGreen() {
+            controller.changeState(request("GREEN"));
+            controller.changeState(request("YELLOW"));
+
+            assertThrows(InvalidTransitionException.class,
+                    () -> controller.changeState(request("GREEN")));
+        }
     }
 
     @Test
-    @Order(3)
-    void shouldChangeStateToYellow() throws Exception {
-        mockMvc.perform(put("/light")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"state\": \"YELLOW\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.state").value("YELLOW"));
+    void shouldHandleLowercaseInput() {
+        var response = controller.changeState(request("green"));
+
+        assertEquals(LightState.GREEN, response.getBody().getState());
+    }
+
+    private TrafficLightController.StateChangeRequest request(String state) {
+        return new TrafficLightController.StateChangeRequest(state);
     }
 }

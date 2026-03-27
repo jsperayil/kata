@@ -1,18 +1,16 @@
 package com.kata.trafficlight;
 
+import lombok.Getter;
+
+@Getter
 public class TrafficLight {
 
-    private LightState state;
+    private LightState state = LightState.RED;
 
-    public TrafficLight() {
-        this.state = LightState.RED;
-    }
-
-    public LightState getState() {
-        return state;
-    }
-
-    public void setState(LightState state) {
-        this.state = state;
+    public void transitionTo(LightState newState) {
+        if (!state.canTransitionTo(newState)) {
+            throw new InvalidTransitionException(state, newState);
+        }
+        this.state = newState;
     }
 }
