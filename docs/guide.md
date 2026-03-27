@@ -123,3 +123,28 @@ mvn spring-boot:run   # try changing directions independently via curl
 mvn test              # 9 tests including conflict scenarios
 mvn spring-boot:run   # try triggering a conflict via curl
 ```
+
+---
+
+## Step 5: Automatic Timing
+
+**Goal:** Lights cycle automatically — GREEN (10s) → YELLOW (3s) → RED, then the next direction takes its turn.
+
+**What you'll learn:**
+- `ScheduledExecutorService` for delayed task execution
+- Spring lifecycle (`@PostConstruct`, `@PreDestroy`)
+- Shared beans with `@Component` and constructor injection
+- Externalizing config with `@Value` and `application.properties`
+- Testing time-based logic by calling the advance method directly
+
+**New/changed files:**
+- `src/main/java/com/kata/trafficlight/TrafficCycleService.java` — the automatic cycle service
+- `src/main/java/com/kata/trafficlight/Intersection.java` — now `@Component`
+- `src/main/java/com/kata/trafficlight/IntersectionController.java` — constructor injection
+- `src/main/resources/application.properties` — timing configuration
+
+**Run it:**
+```bash
+mvn test              # 15 tests including cycle behavior
+mvn spring-boot:run   # watch lights cycle automatically via curl
+```

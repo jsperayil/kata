@@ -15,7 +15,7 @@ class IntersectionControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new IntersectionController();
+        controller = new IntersectionController(new Intersection());
     }
 
     @Nested

@@ -16,7 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/intersection")
 public class IntersectionController {
 
-    private final Intersection intersection = new Intersection();
+    private final Intersection intersection;
+
+    public IntersectionController(Intersection intersection) {
+        this.intersection = intersection;
+    }
 
     @GetMapping
     public Map<Direction, TrafficLight> getIntersection() {
