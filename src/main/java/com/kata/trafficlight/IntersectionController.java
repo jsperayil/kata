@@ -2,6 +2,7 @@ package com.kata.trafficlight;
 
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +35,11 @@ public class IntersectionController {
     @ExceptionHandler(InvalidTransitionException.class)
     public ResponseEntity<ErrorResponse> handleInvalidTransition(InvalidTransitionException ex) {
         return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
     }
 
     public record StateChangeRequest(String state) {}

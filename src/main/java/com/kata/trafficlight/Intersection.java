@@ -22,6 +22,21 @@ public class Intersection {
     }
 
     public void transition(Direction direction, LightState newState) {
+        if (newState == LightState.GREEN) {
+            checkForConflicts(direction);
+        }
         getLight(direction).transitionTo(newState);
+    }
+
+    private void checkForConflicts(Direction requested) {
+        for (Direction other : Direction.values()) {
+            if (other == requested) {
+                continue;
+            }
+            LightState otherState = getLight(other).getState();
+            if (otherState == LightState.GREEN || otherState == LightState.YELLOW) {
+                throw new ConflictException(requested, other);
+            }
+        }
     }
 }

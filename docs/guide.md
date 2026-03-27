@@ -101,3 +101,25 @@ mvn spring-boot:run   # try valid and invalid transitions via curl
 mvn test              # 6 tests for multi-direction behavior
 mvn spring-boot:run   # try changing directions independently via curl
 ```
+
+---
+
+## Step 4: Conflict Safety
+
+**Goal:** Prevent conflicting directions from being GREEN simultaneously — the core safety invariant.
+
+**What you'll learn:**
+- Business rules that span multiple domain objects
+- HTTP 409 Conflict status code
+- Check-then-act pattern for safety enforcement
+
+**New/changed files:**
+- `src/main/java/com/kata/trafficlight/Intersection.java` — added `checkForConflicts()`
+- `src/main/java/com/kata/trafficlight/ConflictException.java` — domain exception for safety violations
+- `src/main/java/com/kata/trafficlight/IntersectionController.java` — `@ExceptionHandler` for 409
+
+**Run it:**
+```bash
+mvn test              # 9 tests including conflict scenarios
+mvn spring-boot:run   # try triggering a conflict via curl
+```

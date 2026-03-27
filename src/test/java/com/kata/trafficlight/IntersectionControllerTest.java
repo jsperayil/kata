@@ -32,20 +32,11 @@ class IntersectionControllerTest {
     }
 
     @Nested
-    class ChangeState {
+    class ValidTransitions {
 
         @Test
         void shouldTransitionNorthSouthToGreen() {
             var response = controller.changeState(Direction.NORTH_SOUTH, request("GREEN"));
-
-            assertEquals(LightState.GREEN, response.getBody().getState());
-        }
-
-        @Test
-        void shouldTransitionEastWestIndependently() {
-            controller.changeState(Direction.NORTH_SOUTH, request("GREEN"));
-
-            var response = controller.changeState(Direction.EAST_WEST, request("GREEN"));
 
             assertEquals(LightState.GREEN, response.getBody().getState());
         }
@@ -61,18 +52,68 @@ class IntersectionControllerTest {
         }
 
         @Test
-        void shouldRejectInvalidTransition() {
-            assertThrows(InvalidTransitionException.class,
-                    () -> controller.changeState(Direction.NORTH_SOUTH, request("YELLOW")));
-        }
-
-        @Test
         void shouldFollowFullCyclePerDirection() {
             controller.changeState(Direction.EAST_WEST, request("GREEN"));
             controller.changeState(Direction.EAST_WEST, request("YELLOW"));
             var response = controller.changeState(Direction.EAST_WEST, request("RED"));
 
             assertEquals(LightState.RED, response.getBody().getState());
+        }
+
+        @Test
+        void shouldAllowGreenAfterOtherDirectionCompletedCycle() {
+            // NORTH_SOUTH goes through full cycle back to RED
+            controller.changeState(Direction.NORTH_SOUTH, request("GREEN"));
+            controller.changeState(Direction.NORTH_SOUTH, request("YELLOW"));
+            controller.changeState(Direction.NORTH_SOUTH, request("RED"));
+
+            // Now EAST_WEST can go GREEN
+            var response = controller.changeState(Direction.EAST_WEST, request("GREEN"));
+
+            assertEquals(LightState.GREEN, response.getBody().getState());
+        }
+    }
+
+    @Nested
+    class ConflictSafety {
+
+        @Test
+        void shouldRejectGreenWhenOtherDirectionIsGreen() {
+            controller.changeState(Direction.NORTH_SOUTH, request("GREEN"));
+
+            assertThrows(ConflictException.class,
+                    () -> controller.changeState(Direction.EAST_WEST, request("GREEN")));
+        }
+
+        @Test
+        void shouldRejectGreenWhenOtherDirectionIsYellow() {
+            controller.changeState(Direction.NORTH_SOUTH, request("GREEN"));
+            controller.changeState(Direction.NORTH_SOUTH, request("YELLOW"));
+
+            assertThrows(ConflictException.class,
+                    () -> controller.changeState(Direction.EAST_WEST, request("GREEN")));
+        }
+
+        @Test
+        void shouldPreserveStateAfterRejectedConflict() {
+            controller.changeState(Direction.NORTH_SOUTH, request("GREEN"));
+
+            assertThrows(ConflictException.class,
+                    () -> controller.changeState(Direction.EAST_WEST, request("GREEN")));
+
+            // Both directions should be unchanged
+            assertEquals(LightState.GREEN, controller.getIntersection().get(Direction.NORTH_SOUTH).getState());
+            assertEquals(LightState.RED, controller.getIntersection().get(Direction.EAST_WEST).getState());
+        }
+    }
+
+    @Nested
+    class InvalidTransitions {
+
+        @Test
+        void shouldRejectInvalidTransition() {
+            assertThrows(InvalidTransitionException.class,
+                    () -> controller.changeState(Direction.NORTH_SOUTH, request("YELLOW")));
         }
     }
 
