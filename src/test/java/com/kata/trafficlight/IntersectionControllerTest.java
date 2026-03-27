@@ -7,15 +7,21 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IntersectionControllerTest {
 
+    private Intersection intersection;
+    private TrafficCycleService cycleService;
     private IntersectionController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new IntersectionController(new Intersection());
+        intersection = new Intersection();
+        cycleService = new TrafficCycleService(intersection);
+        controller = new IntersectionController(intersection, cycleService);
     }
 
     @Nested
@@ -114,6 +120,56 @@ class IntersectionControllerTest {
         void shouldRejectInvalidTransition() {
             assertThrows(InvalidTransitionException.class,
                     () -> controller.changeState(Direction.NORTH_SOUTH, request("YELLOW")));
+        }
+    }
+
+    @Nested
+    class PauseAndResume {
+
+        @Test
+        void shouldPauseCycle() {
+            var response = controller.pause();
+
+            assertFalse(response.running());
+            assertFalse(cycleService.isRunning());
+        }
+
+        @Test
+        void shouldResumeCycle() {
+            controller.pause();
+
+            var response = controller.resume();
+
+            assertTrue(response.running());
+            assertTrue(cycleService.isRunning());
+        }
+
+        @Test
+        void shouldReturnRunningStatus() {
+            assertTrue(controller.getStatus().running());
+
+            controller.pause();
+            assertFalse(controller.getStatus().running());
+
+            controller.resume();
+            assertTrue(controller.getStatus().running());
+        }
+
+        @Test
+        void shouldAllowManualTransitionWhilePaused() {
+            controller.pause();
+
+            var response = controller.changeState(Direction.NORTH_SOUTH, request("GREEN"));
+
+            assertEquals(LightState.GREEN, response.getBody().getState());
+        }
+
+        @Test
+        void shouldNotAutoScheduleWhenPaused() {
+            controller.pause();
+
+            // advanceCycle() still works when called directly — pause only stops auto-scheduling
+            assertFalse(cycleService.isRunning());
         }
     }
 

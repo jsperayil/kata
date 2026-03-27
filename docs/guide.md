@@ -148,3 +148,29 @@ mvn spring-boot:run   # try triggering a conflict via curl
 mvn test              # 15 tests including cycle behavior
 mvn spring-boot:run   # watch lights cycle automatically via curl
 ```
+
+---
+
+## Step 6: Pause and Resume
+
+**Goal:** Add commands to pause, resume, and check the status of the automatic cycle. Manual transitions still work while paused.
+
+**What you'll learn:**
+- POST for actions (not CRUD)
+- Separating scheduling from logic for testability
+- Constructor injection with multiple dependencies
+
+**New endpoints:**
+- `POST /intersection/pause` — stops auto-cycling
+- `POST /intersection/resume` — restarts auto-cycling
+- `GET /intersection/status` — returns `{"running": true/false}`
+
+**Changed files:**
+- `src/main/java/com/kata/trafficlight/TrafficCycleService.java` — added `pause()` and `resume()`
+- `src/main/java/com/kata/trafficlight/IntersectionController.java` — new POST/GET endpoints
+
+**Run it:**
+```bash
+mvn test              # 21 tests including pause/resume behavior
+mvn spring-boot:run   # try pausing, manual control, then resuming
+```

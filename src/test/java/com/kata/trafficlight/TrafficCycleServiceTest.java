@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TrafficCycleServiceTest {
 
@@ -15,6 +17,7 @@ class TrafficCycleServiceTest {
     void setUp() {
         intersection = new Intersection();
         cycleService = new TrafficCycleService(intersection);
+        cycleService.pause(); // prevent scheduler from interfering with manual advanceCycle() calls
     }
 
     @Nested
@@ -70,15 +73,22 @@ class TrafficCycleServiceTest {
     }
 
     @Nested
-    class StoppedBehavior {
+    class PauseBehavior {
 
         @Test
-        void shouldNotAdvanceWhenNotRunning() {
-            cycleService.shutdown();
-            cycleService.advanceCycle();
+        void shouldNotAutoScheduleWhenPaused() {
+            // pause() is called in setUp — verify the flag
+            assertFalse(cycleService.isRunning());
 
-            assertEquals(LightState.RED, lightState(Direction.NORTH_SOUTH));
-            assertEquals(LightState.RED, lightState(Direction.EAST_WEST));
+            // advanceCycle() still works when called directly
+            cycleService.advanceCycle();
+            assertEquals(LightState.GREEN, lightState(Direction.NORTH_SOUTH));
+        }
+
+        @Test
+        void shouldResumeAutoSchedulingAfterResume() {
+            cycleService.resume();
+            assertTrue(cycleService.isRunning());
         }
     }
 

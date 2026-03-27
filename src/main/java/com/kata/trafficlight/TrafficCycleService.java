@@ -44,6 +44,18 @@ public class TrafficCycleService {
         scheduler.shutdownNow();
     }
 
+    public void pause() {
+        running = false;
+    }
+
+    public void resume() {
+        if (running) {
+            return;
+        }
+        running = true;
+        scheduleNextPhase(0);
+    }
+
     void scheduleNextPhase(long delaySeconds) {
         if (!running) {
             return;
@@ -52,10 +64,6 @@ public class TrafficCycleService {
     }
 
     void advanceCycle() {
-        if (!running) {
-            return;
-        }
-
         Direction current = Direction.values()[currentDirectionIndex];
         LightState state = intersection.getLight(current).getState();
 

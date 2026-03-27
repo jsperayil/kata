@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,9 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class IntersectionController {
 
     private final Intersection intersection;
+    private final TrafficCycleService cycleService;
 
-    public IntersectionController(Intersection intersection) {
+    public IntersectionController(Intersection intersection, TrafficCycleService cycleService) {
         this.intersection = intersection;
+        this.cycleService = cycleService;
     }
 
     @GetMapping
@@ -36,6 +39,23 @@ public class IntersectionController {
         return ResponseEntity.ok(intersection.getLight(direction));
     }
 
+    @PostMapping("/pause")
+    public StatusResponse pause() {
+        cycleService.pause();
+        return new StatusResponse(false);
+    }
+
+    @PostMapping("/resume")
+    public StatusResponse resume() {
+        cycleService.resume();
+        return new StatusResponse(true);
+    }
+
+    @GetMapping("/status")
+    public StatusResponse getStatus() {
+        return new StatusResponse(cycleService.isRunning());
+    }
+
     @ExceptionHandler(InvalidTransitionException.class)
     public ResponseEntity<ErrorResponse> handleInvalidTransition(InvalidTransitionException ex) {
         return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
@@ -49,4 +69,6 @@ public class IntersectionController {
     public record StateChangeRequest(String state) {}
 
     public record ErrorResponse(String error) {}
+
+    public record StatusResponse(boolean running) {}
 }
